@@ -1,0 +1,33 @@
+# ===== Android / Gradle =====
+.gradle/
+build/
+**/build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# ===== Android Studio / IntelliJ =====
+.idea/
+*.iml
+.kotlin/
+
+# ===== Python / Notebooks =====
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ===== Datos pesados (el dataset NO se versiona, solo su readme) =====
+dataset/images/
+dataset/raw/
+*.zip
+
+# ===== Sistema operativo =====
+.DS_Store
+Thumbs.db
