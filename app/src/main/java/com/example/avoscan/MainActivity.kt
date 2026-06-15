@@ -7,80 +7,64 @@ import androidx.compose.runtime.*
 import androidx.navigation.compose.*
 import com.example.avoscan.ml.AvoClassifier
 import com.example.avoscan.ui.screens.*
+import com.example.avoscan.ui.theme.AvoScanTheme
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
 
         setContent {
 
-            val navController = rememberNavController()
+            AvoScanTheme {
 
-            var resultado by remember {
-                mutableStateOf<AvoClassifier.Resultado?>(null)
-            }
+                val navController = rememberNavController()
 
-            NavHost(
-                navController = navController,
-                startDestination = "splash"
-            ) {
+                var resultado by remember {
+                    mutableStateOf<AvoClassifier.Resultado?>(null)
+                }
 
-                composable("splash") {
+                NavHost(
+                    navController = navController,
+                    startDestination = "splash"
+                ) {
 
-                    SplashScreen(
-                        onFinish = {
-                            navController.navigate("home") {
-                                popUpTo("splash") { inclusive = true }
+                    composable("splash") {
+                        SplashScreen(
+                            onFinish = {
+                                navController.navigate("home") {
+                                    popUpTo("splash") { inclusive = true }
+                                }
                             }
-                        }
-                    )
-                }
+                        )
+                    }
 
-                composable("home") {
+                    composable("home") {
+                        HomeScreen(
+                            onStartClick = { navController.navigate("camera") },
+                            onHistorialClick = { navController.navigate("historial") }
+                        )
+                    }
 
-                    HomeScreen(
+                    composable("camera") {
+                        CameraScreen(
+                            onResultado = { res ->
+                                resultado = res
+                                navController.navigate("resultado")
+                            }
+                        )
+                    }
 
-                        onStartClick = {
+                    composable("resultado") {
+                        ResultadoScreen(
+                            resultado = resultado,
+                            onHistorialClick = { navController.navigate("historial") }
+                        )
+                    }
 
-                            navController.navigate("camera")
-                        },
-
-                        onHistorialClick = {
-
-                            navController.navigate("historial")
-                        }
-                    )
-                }
-
-                composable("camera") {
-
-                    CameraScreen(
-                        onResultado = { res ->
-
-                            resultado = res
-
-                            navController.navigate("resultado")
-                        }
-                    )
-                }
-
-                composable("resultado") {
-
-                    ResultadoScreen(
-                        resultado = resultado,
-
-                        onHistorialClick = {
-
-                            navController.navigate("historial")
-                        }
-                    )
-                }
-
-                composable("historial") {
-
-                    HistorialScreen()
+                    composable("historial") {
+                        HistorialScreen()
+                    }
                 }
             }
         }
