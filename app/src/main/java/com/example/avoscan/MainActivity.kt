@@ -3,9 +3,13 @@ package com.example.avoscan
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.*
 import com.example.avoscan.ml.AvoClassifier
+import com.example.avoscan.ui.components.BottomBar
 import com.example.avoscan.ui.screens.*
 import com.example.avoscan.ui.theme.AvoScanTheme
 
@@ -15,7 +19,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-
             AvoScanTheme {
 
                 val navController = rememberNavController()
@@ -24,46 +27,56 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<AvoClassifier.Resultado?>(null)
                 }
 
-                NavHost(
-                    navController = navController,
-                    startDestination = "splash"
-                ) {
+                val backStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = backStackEntry?.destination?.route
 
-                    composable("splash") {
-                        SplashScreen(
-                            onFinish = {
-                                navController.navigate("home") {
+                val routesWithBottomBar = setOf(
+                    "dashboard", "camera", "historial", "reportes"
+                )
+
+                Scaffold(
+                    bottomBar = {
+                        if (currentRoute in routesWithBottomBar) {
+                            BottomBar(navController = navController)
+                        }
+                    }
+                ) { padding ->
+
+                    NavHost(
+                        navController = navController,
+                        startDestination = "splash",
+                        modifier = Modifier.padding(padding)
+                    ) {
+                        composable("splash") {
+                            SplashScreen(onFinish = {
+                                navController.navigate("dashboard") {
                                     popUpTo("splash") { inclusive = true }
                                 }
-                            }
-                        )
-                    }
+                            })
+                        }
 
-                    composable("home") {
-                        HomeScreen(
-                            onStartClick = { navController.navigate("camera") },
-                            onHistorialClick = { navController.navigate("historial") }
-                        )
-                    }
+                        composable("dashboard") {
+                            DashboardScreen(
+                                onDetectarClick    = { navController.navigate("camera") },
+                            ) { navController.navigate("historial") }
+                        }
 
-                    composable("camera") {
-                        CameraScreen(
-                            onResultado = { res ->
+                        composable("camera") {
+                            CameraScreen(onResultado = { res ->
                                 resultado = res
                                 navController.navigate("resultado")
-                            }
-                        )
-                    }
+                            })
+                        }
 
-                    composable("resultado") {
-                        ResultadoScreen(
-                            resultado = resultado,
-                            onHistorialClick = { navController.navigate("historial") }
-                        )
-                    }
+                        composable("resultado") {
+                            ResultadoScreen(
+                                resultado = resultado,
+                                onHistorialClick = { navController.navigate("historial") }
+                            )
+                        }
 
-                    composable("historial") {
-                        HistorialScreen()
+                        composable("historial") { HistorialScreen() }
+                        composable("reportes")  { ReportesScreen() }
                     }
                 }
             }
