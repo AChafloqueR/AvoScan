@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
                         composable("resultado") {
                             ResultadoScreen(
                                 resultado = resultado,
-                                onHistorialClick = { navController.navigate("historial") }
+                                onVolverClick = { navController.popBackStack() }
                             )
                         }
 
