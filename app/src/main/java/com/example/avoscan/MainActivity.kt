@@ -1,14 +1,18 @@
 package com.example.avoscan
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
 import com.example.avoscan.ml.AvoClassifier
+import com.example.avoscan.ml.BenchmarkUtil          // <-- AGREGADO
 import com.example.avoscan.ui.components.BottomBar
 import com.example.avoscan.ui.screens.*
 import com.example.avoscan.ui.theme.AvoScanTheme
@@ -17,6 +21,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        window.attributes = window.attributes.apply { screenBrightness = 0.3f }
+        BenchmarkUtil.ejecutar(this)
 
         setContent {
             AvoScanTheme {
@@ -68,6 +75,7 @@ class MainActivity : ComponentActivity() {
                             })
                         }
 
+                        // Resultado nuevo (viene de la cámara)
                         composable("resultado") {
                             ResultadoScreen(
                                 resultado = resultado,
@@ -75,7 +83,27 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        composable("historial") { HistorialScreen() }
+                        // Historial (lista clickeable)
+                        composable("historial") {
+                            HistorialScreen(
+                                onItemClick = { analisisId ->
+                                    navController.navigate("resultado_historial/$analisisId")
+                                }
+                            )
+                        }
+
+                        // Resultado abierto desde el historial
+                        composable(
+                            route = "resultado_historial/{analisisId}",
+                            arguments = listOf(navArgument("analisisId") { type = NavType.LongType })
+                        ) { backStackEntry ->
+                            val analisisId = backStackEntry.arguments?.getLong("analisisId") ?: 0L
+                            ResultadoHistorialScreen(
+                                analisisId = analisisId,
+                                onVolverClick = { navController.popBackStack() }
+                            )
+                        }
+
                         composable("reportes")  { ReportesScreen() }
                     }
                 }
