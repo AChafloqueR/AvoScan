@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -64,15 +65,25 @@ fun ResultadoScreen(
             listOf("Color uniforme", "Sin lesiones visibles"),
             "Mantener condiciones adecuadas de cultivo."
         )
+        // No-palta NO muestra tarjetas de enfermedad: no aplica
         else -> null
     }
 
-    val (colorEstado, severidadLabel, iconEstado) = when (estado.color) {
-        com.example.avoscan.ml.ColorEstado.ROJO     -> Triple(SeverityHigh,   "Alta",       Icons.Default.BugReport)
-        com.example.avoscan.ml.ColorEstado.NARANJA  -> Triple(SeverityMedium, "Media",      Icons.Default.BugReport)
-        com.example.avoscan.ml.ColorEstado.AMARILLO -> Triple(SeverityWarn,   "Incierta",   Icons.Default.WarningAmber)
-        com.example.avoscan.ml.ColorEstado.VERDE    -> Triple(SeverityLow,    "Sin riesgo", Icons.Default.CheckCircle)
-        else                                        -> Triple(SeverityGray,   "—",          Icons.Default.WarningAmber)
+    val (colorEstado, severidadLabel, iconEstado) = when (estado) {
+        // Caso especial: No es palta → ícono de búsqueda + sin severidad
+        EstadoDiagnostico.NO_ES_PALTA -> Triple(
+            SeverityGray,
+            "No aplica",
+            Icons.Default.Search
+        )
+        else -> when (estado.color) {
+            com.example.avoscan.ml.ColorEstado.ROJO       -> Triple(SeverityHigh,   "Alta",       Icons.Default.BugReport)
+            com.example.avoscan.ml.ColorEstado.NARANJA    -> Triple(SeverityMedium, "Media",      Icons.Default.BugReport)
+            com.example.avoscan.ml.ColorEstado.AMARILLO   -> Triple(SeverityWarn,   "Incierta",   Icons.Default.WarningAmber)
+            com.example.avoscan.ml.ColorEstado.VERDE      -> Triple(SeverityLow,    "Sin riesgo", Icons.Default.CheckCircle)
+            com.example.avoscan.ml.ColorEstado.GRIS_CLARO -> Triple(SeverityGray,   "No aplica",  Icons.Default.Search)
+            else                                          -> Triple(SeverityGray,   "—",          Icons.Default.WarningAmber)
+        }
     }
 
     Scaffold(

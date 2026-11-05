@@ -29,4 +29,7 @@ interface AnalisisDao {
 
     @Query("DELETE FROM analisis")
     suspend fun eliminarTodos()
+
+    @Query("SELECT * FROM analisis WHERE id = :id LIMIT 1")
+    suspend fun obtenerPorId(id: Long): AnalisisEntity?
 }

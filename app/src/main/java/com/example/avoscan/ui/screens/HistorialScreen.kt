@@ -3,6 +3,7 @@ package com.example.avoscan.ui.screens
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,7 +40,9 @@ private enum class FiltroHistorial(val label: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistorialScreen() {
+fun HistorialScreen(
+    onItemClick: (Long) -> Unit  // ← nuevo parámetro
+) {
 
     val context = LocalContext.current
     val dao = remember { AvoDatabase.getInstance(context).analisisDao() }
@@ -87,7 +90,7 @@ fun HistorialScreen() {
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(filtrados) { item ->
-                        HistorialItemCard(item)
+                        HistorialItemCard(item, onClick = { onItemClick(item.id) })
                     }
                 }
             }
@@ -96,7 +99,10 @@ fun HistorialScreen() {
 }
 
 @Composable
-private fun HistorialItemCard(item: AnalisisEntity) {
+private fun HistorialItemCard(
+    item: AnalisisEntity,
+    onClick: () -> Unit  // ← nuevo parámetro
+) {
 
     val bitmap = remember(item.imagePath) {
         item.imagePath?.let {
@@ -110,7 +116,9 @@ private fun HistorialItemCard(item: AnalisisEntity) {
     }
 
     Card(
-        modifier  = Modifier.fillMaxWidth(),
+        modifier  = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },  // ← clickable
         colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape     = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -212,11 +220,12 @@ private fun EstadoVacio(filtro: FiltroHistorial) {
 }
 
 private fun estadoEstiloHistorial(estadoColor: String): Pair<Color, String> = when (estadoColor) {
-    "ROJO"     -> SeverityHigh   to "Alta"
-    "NARANJA"  -> SeverityMedium to "Media"
-    "AMARILLO" -> SeverityWarn   to "Incierta"
-    "VERDE"    -> SeverityLow    to "Sin riesgo"
-    else       -> SeverityGray   to "—"
+    "ROJO"       -> SeverityHigh   to "Alta"
+    "NARANJA"    -> SeverityMedium to "Media"
+    "AMARILLO"   -> SeverityWarn   to "Incierta"
+    "VERDE"      -> SeverityLow    to "Sin riesgo"
+    "GRIS_CLARO" -> SeverityGray   to "No aplica"  // ← nuevo
+    else         -> SeverityGray   to "—"
 }
 
 private fun aplicarFiltro(items: List<AnalisisEntity>, filtro: FiltroHistorial): List<AnalisisEntity> {

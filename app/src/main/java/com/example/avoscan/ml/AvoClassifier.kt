@@ -8,27 +8,31 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import com.example.avoscan.utils.ImagePreprocessor
 
-enum class ColorEstado { VERDE, AMARILLO, NARANJA, ROJO, GRIS }
+enum class ColorEstado { VERDE, AMARILLO, NARANJA, ROJO, GRIS, GRIS_CLARO }
 
 enum class EstadoDiagnostico(val titulo: String, val color: ColorEstado) {
     SIN_SINTOMAS("Sin síntomas visibles", ColorEstado.VERDE),
     SINTOMAS_ANTRACNOSIS("Síntomas de antracnosis", ColorEstado.ROJO),
     SINTOMAS_RONA("Síntomas de roña", ColorEstado.NARANJA),
     INFECCION_LATENTE("Diagnóstico no concluyente", ColorEstado.AMARILLO),
+    NO_ES_PALTA("No es una palta", ColorEstado.GRIS_CLARO),
     IMAGEN_INSUFICIENTE("Imagen insuficiente", ColorEstado.GRIS)
 }
 
 class AvoClassifier(context: Context) {
-    private val modelFile = "MobileNetV3Small_float16.tflite"
-    private val etiquetas = listOf("Antracnosis", "Roña", "Sano")
+    private val modelFile = "mobilenetv3small_float16.tflite"
+    private val etiquetas = listOf("Antracnosis", "Roña", "Sano", "No-palta")
     private val tam = 224
     private val interpreter: Interpreter = Interpreter(cargarModelo(context, modelFile))
 
     companion object {
-        const val UMBRAL_INSUFICIENTE = 0.60f
-        const val UMBRAL_CONFIANZA_CLARA = 0.85f
-        const val UMBRAL_MARGEN_MINIMO = 0.25f   // gap mínimo entre top1 y top2
+        // Umbrales calibrados para 4 clases
+        const val UMBRAL_INSUFICIENTE = 0.50f          // muy poca confianza global
+        const val UMBRAL_CONFIANZA_CLARA = 0.80f       // confianza alta para diagnóstico definitivo
+        const val UMBRAL_MARGEN_MINIMO = 0.20f         // gap mínimo entre top1 y top2
+        const val UMBRAL_NO_PALTA = 0.70f              // confianza mínima para confirmar "no es palta"
     }
 
     data class Resultado(
@@ -41,7 +45,9 @@ class AvoClassifier(context: Context) {
     )
 
     fun clasificar(bitmap: Bitmap): Resultado {
-        val entrada = bitmapAByteBuffer(bitmap)
+
+        val bitmapProcesado = ImagePreprocessor.preprocesarFruto(bitmap)
+        val entrada = bitmapAByteBuffer(bitmapProcesado)
         val salida = Array(1) { FloatArray(etiquetas.size) }
         interpreter.run(entrada, salida)
         val probs = salida[0]
@@ -74,14 +80,31 @@ class AvoClassifier(context: Context) {
         margen: Float
     ): Pair<EstadoDiagnostico, String> {
         return when {
+            // 1) Detección directa de "no es palta" (con confianza alta)
+            clase == "No-palta" && confianza >= UMBRAL_NO_PALTA -> Pair(
+                EstadoDiagnostico.NO_ES_PALTA,
+                "La imagen no corresponde a una palta. Por favor, asegúrese de capturar el fruto completo, centrado y con buena iluminación."
+            )
+
+            // 2) "No-palta" detectado pero con baja confianza → imagen insuficiente
+            clase == "No-palta" && confianza < UMBRAL_NO_PALTA -> Pair(
+                EstadoDiagnostico.IMAGEN_INSUFICIENTE,
+                "No fue posible identificar claramente el objeto. Tome otra foto con mejor iluminación, fondo claro y el fruto centrado."
+            )
+
+            // 3) Confianza global muy baja → imagen insuficiente
             confianza < UMBRAL_INSUFICIENTE -> Pair(
                 EstadoDiagnostico.IMAGEN_INSUFICIENTE,
                 "No fue posible un diagnóstico confiable. Tome otra foto con mejor iluminación, fondo claro y el fruto centrado."
             )
+
+            // 4) Confianza ambigua entre clases de palta → diagnóstico no concluyente
             margen < UMBRAL_MARGEN_MINIMO || confianza < UMBRAL_CONFIANZA_CLARA -> Pair(
                 EstadoDiagnostico.INFECCION_LATENTE,
                 "El modelo identifica señales ambiguas. Puede tratarse de una infección en etapa temprana, asintomática, o un caso visualmente parecido entre dos patologías. Se recomienda repetir el análisis o consultar a un técnico fitopatológico."
             )
+
+            // 5) Diagnósticos claros
             clase == "Sano" -> Pair(
                 EstadoDiagnostico.SIN_SINTOMAS,
                 "No se detectan síntomas visibles de enfermedad. Tenga en cuenta que la antracnosis puede permanecer latente y manifestarse luego de la cosecha."
@@ -103,6 +126,7 @@ class AvoClassifier(context: Context) {
         val pixeles = IntArray(tam * tam)
         redim.getPixels(pixeles, 0, tam, 0, 0, tam, tam)
         for (p in pixeles) {
+            // MobileNetV3-Small con include_preprocessing=True espera pixeles en rango [0, 255]
             val r = ((p shr 16) and 0xFF).toFloat()
             val g = ((p shr 8) and 0xFF).toFloat()
             val b = (p and 0xFF).toFloat()
